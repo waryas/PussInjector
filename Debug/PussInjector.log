@@ -1,0 +1,8 @@
+﻿  PussInjector.cpp
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\xorstring.h(58): warning C4307: '*' : dépassement de constante intégrale
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\xorstring.h(58): warning C4307: '+' : dépassement de constante intégrale
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(37): warning C4018: '<' : incompatibilité signed/unsigned
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(70): warning C4477: 'printf' : la chaîne de format '%p' nécessite un argument de type 'void *', mais l'argument variadique 1 est de type 'uintptr_t'
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(70): warning C4477: 'printf' : la chaîne de format '%p' nécessite un argument de type 'void *', mais l'argument variadique 2 est de type 'uintptr_t'
+  PussInjector.vcxproj -> C:\Users\Waryas\Documents\Visual Studio 2017\Projects\PussInjector\Debug\PussInjector.exe
+  PussInjector.vcxproj -> C:\Users\Waryas\Documents\Visual Studio 2017\Projects\PussInjector\Debug\PussInjector.pdb (Partial PDB)
