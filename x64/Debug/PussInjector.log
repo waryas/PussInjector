@@ -1,0 +1,16 @@
+﻿  PussInjector.cpp
+c:\users\waryas\documents\visual studio 2017\projects\nm_test\nm_test\xorcrypt.h(60): warning C4307: '*' : dépassement de constante intégrale
+c:\users\waryas\documents\visual studio 2017\projects\nm_test\nm_test\xorcrypt.h(60): warning C4307: '+' : dépassement de constante intégrale
+c:\users\waryas\documents\visual studio 2017\projects\nm_test\nm_test\xorcrypt.h(60): warning C4309: 'static_cast' : troncation de valeur de constante
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): warning C4477: 'printf' : la chaîne de format '%p' nécessite un argument de type 'void *', mais l'argument variadique 1 est de type 'uintptr_t'
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): warning C4477: 'printf' : la chaîne de format '%p' nécessite un argument de type 'void *', mais l'argument variadique 2 est de type 'uintptr_t'
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): warning C4477: 'printf' : la chaîne de format '%d' nécessite un argument de type 'int', mais l'argument variadique 4 est de type 'uintptr_t'
+  c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): note: utilisez '%lld' dans la chaîne de format
+  c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): note: utilisez '%Id' dans la chaîne de format
+  c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): note: utilisez '%I64d' dans la chaîne de format
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): warning C4477: 'printf' : la chaîne de format '%d' nécessite un argument de type 'int', mais l'argument variadique 5 est de type 'uintptr_t'
+  c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): note: utilisez '%lld' dans la chaîne de format
+  c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): note: utilisez '%Id' dans la chaîne de format
+  c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\pussinjector.cpp(72): note: utilisez '%I64d' dans la chaîne de format
+  PussInjector.vcxproj -> C:\Users\Waryas\Documents\Visual Studio 2017\Projects\PussInjector\x64\Debug\PussInjector.exe
+  PussInjector.vcxproj -> C:\Users\Waryas\Documents\Visual Studio 2017\Projects\PussInjector\x64\Debug\PussInjector.pdb (Partial PDB)
