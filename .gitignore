@@ -36,3 +36,10 @@
 *.pdb
 *.log
 *.log
+*.tlog
+*.lastbuildstate
+*.tlog
+*.pdb
+*.tlog
+*.lastbuildstate
+*.log
