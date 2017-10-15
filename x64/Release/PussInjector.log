@@ -1,7 +1,11 @@
 ﻿  PICForRemoteProcess.cpp
 c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\XorString.h(58): warning C4307: '*' : dépassement de constante intégrale
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\XorString.h(58): warning C4307: '+' : dépassement de constante intégrale
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\XorString.h(58): warning C4309: 'static_cast' : troncation de valeur de constante
   PussInjector.cpp
 c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\XorString.h(58): warning C4307: '*' : dépassement de constante intégrale
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\XorString.h(58): warning C4307: '+' : dépassement de constante intégrale
+c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\XorString.h(58): warning C4309: 'static_cast' : troncation de valeur de constante
      Création de la bibliothèque C:\Users\Waryas\Documents\Visual Studio 2017\Projects\PussInjector\x64\Release\PussInjector.lib et de l'objet C:\Users\Waryas\Documents\Visual Studio 2017\Projects\PussInjector\x64\Release\PussInjector.exp
   Génération de code en cours
 c:\users\waryas\documents\visual studio 2017\projects\pussinjector\pussinjector\picforremoteprocess.cpp(144): warning C4717: 'end_marker' : récurrent sur tous les chemins d'accès de contrôle, la fonction entraînera un dépassement de capacité de la pile d'exécution
