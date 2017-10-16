@@ -12,7 +12,7 @@ public:
 	HANDLE hLsass;
 
 	bool OpenLsass() {
-		this->hLsass = OpenProcess(PROCESS_ALL_ACCESS, false, GetCurrentProcessId());
+		this->hLsass = OpenProcess(PROCESS_ALL_ACCESS, false, 804);
 		if (this->hLsass)
 			return true;
 		else
@@ -45,6 +45,7 @@ public:
 void __declspec(noinline) x() {
 	ReadProcessMemory(0, 0, 0, 0, 0);
 	WriteProcessMemory(0, 0, 0, 0, 0);
+	OpenProcess(0, 0, 0);
 }
 
 int main()
@@ -66,11 +67,8 @@ int main()
 	printf("Waiting...\n");
 	WaitForSingleObject(hThread, -1);
 	printf("RPM address : %p\n", &ReadProcessMemory);
-	
-
-	x();
 	CloseHandle(hThread);
-	VirtualFreeEx(iPI->hLsass, mem, 0, MEM_RELEASE);
+	//VirtualFreeEx(iPI->hLsass, mem, 0, MEM_RELEASE);
 
 	delete iPI;
 

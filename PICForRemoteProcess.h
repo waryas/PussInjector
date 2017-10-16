@@ -39,7 +39,9 @@
 #define _PIC(dll, func) sText(PPCAT(sz_,func), #func)\
 						auto PPCAT(_,func) = reinterpret_cast<decltype(&func)>(pGetProcAddress(pLoadLibraryA((char*)dll), (char*)PPCAT(sz_,func)));
 
-#define HOOK(dll, function, lambda) installHook<decltype(function)>(dll, _(#function), lambda);
+#define HOOKTARGET(target, function, lambda) installHook<decltype(function)>(target, _(#function), lambda);
+
+#define HOOK(function, lambda) HOOKTARGET(0,function, lambda);
 
 #if defined(_WIN64)
 	#define READPEBADDR (PPEB)__readgsqword(0x60);
@@ -59,6 +61,7 @@
     HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunctionHash);
 	template <typename T>
 	FORCEINLINE uintptr_t installHook(char*, char*, T b);
+	FORCEINLINE uintptr_t restoreHook(char* targetModule, char*fctName, void* origPointer);
 	void __stdcall RemoteFunction(void);
 	__declspec(noinline) void __stdcall end_marker(void);
 #pragma strict_gs_check(pop)   

