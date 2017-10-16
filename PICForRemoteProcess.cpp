@@ -12,6 +12,7 @@
 #pragma auto_inline(off)
 #pragma check_stack(off)
 #pragma code_seg(push, ".p")
+
 __declspec(dllexport) HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunctionHash)
 {
 	PPEB PebAddress;
@@ -86,54 +87,95 @@ __declspec(dllexport) HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunction
 }
 
 
-
-__declspec(dllexport) void __stdcall RemoteFunction() {
-
-	auto pLoadLibraryA = reinterpret_cast<decltype(&LoadLibraryA)>(GetProcAddressWithHash(LOADLIBRARYA_HASH));
-	if (!pLoadLibraryA)
-		return;
-	auto pGetProcAddress = reinterpret_cast<decltype(&GetProcAddress)>(GetProcAddressWithHash(GETPROCESADDR_HASH));
-	if (!pGetProcAddress)
-		return;
-
-	//NON CRT LOAD	
+template <typename T>
+FORCEINLINE __declspec(dllexport) uintptr_t installHook(char* dllName, char*fctName, T b)
+{
+	INITPIC(-1);
 
 	sText(szKernel32Dll, "kernel32.dll");
 	sText(szUser32Dll, "user32.dll");
 	sText(szNtdllDll, "ntdll.dll");
-
-	PIC(szUser32Dll, MessageBoxA);
-	PIC(szKernel32Dll, SetConsoleTitleA);
-	PIC(szKernel32Dll, OpenProcess);
-	PIC(szKernel32Dll, WriteProcessMemory);
-	PIC(szKernel32Dll, ReadProcessMemory);
-	PIC(szKernel32Dll, GetModuleFileNameA);
-	PIC(szKernel32Dll, AllocConsole);
-
-	//CRT LOAD
-
 	sText(szMsvrtDll, "msvcrt.dll");
 
-	_PIC(szMsvrtDll, fopen);
-	_PIC(szMsvrtDll, fprintf);
-	_PIC(szMsvrtDll, fclose);
+
+	PIC(szKernel32Dll, VirtualProtect);
+	PIC(szKernel32Dll, GetModuleHandleA);
+
 	_PIC(szMsvrtDll, printf);
-	_PIC(szMsvrtDll, sprintf);
-	_PIC(szMsvrtDll, system);
-	_PIC(szMsvrtDll, freopen);
-
-	//Small fixup because VS17 doesn't use msvcrt.dll 
-	_CRTIMP FILE * __cdecl __iob_func(void);
-	_PIC(szMsvrtDll, __iob_func);
+	_PIC(szMsvrtDll, strcmp);
 	
-	volatile char buffer[256];
-	volatile char buffer2[256];
+	
+	auto module = fGetModuleHandleA(0);
+	void** IATAddr = 0;
+	PIMAGE_DOS_HEADER img_dos_headers = (PIMAGE_DOS_HEADER)module;
+	PIMAGE_NT_HEADERS img_nt_headers = (PIMAGE_NT_HEADERS)((byte*)img_dos_headers + img_dos_headers->e_lfanew);
+	PIMAGE_IMPORT_DESCRIPTOR img_import_desc = (PIMAGE_IMPORT_DESCRIPTOR)((byte*)img_dos_headers + img_nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
 
-	fAllocConsole();
-	fSetConsoleTitleA(_("Nigga"));
-	fGetModuleFileNameA(0, (char*)buffer, 256);
-	_sprintf((char*)buffer2, _("\nI am inside %s\n"), buffer);
-	fMessageBoxA(NULL, (char*)buffer2, _("This is a 100% PIC function!!!!"), MB_OK);
+	for (IMAGE_IMPORT_DESCRIPTOR *iid = img_import_desc; iid->Name != 0; iid++) {
+		for (int func_idx = 0; *(func_idx + (void**)(iid->FirstThunk + (size_t)module)) != nullptr; func_idx++) {
+			char* mod_func_name = (char*)(*(func_idx + (size_t*)(iid->OriginalFirstThunk + (size_t)module)) + (size_t)module + 2);
+			const intptr_t nmod_func_name = (intptr_t)mod_func_name;
+			if (nmod_func_name >= 0) {
+				if (!_strcmp(fctName, mod_func_name))
+					IATAddr = func_idx + (void**)(iid->FirstThunk + (size_t)module);
+			}
+		}
+	}
+	
+	if (IATAddr) {
+
+		DWORD oldProtect = 0;
+		fVirtualProtect(IATAddr, sizeof(uintptr_t), PAGE_READWRITE, &oldProtect);
+		*IATAddr = b;
+		fVirtualProtect(IATAddr, sizeof(uintptr_t), oldProtect, &oldProtect);
+		return 1;
+	}
+	else
+		return 0;
+	
+}
+
+
+
+__declspec(dllexport) void __stdcall RemoteFunction() {
+
+	INITPIC();
+
+	sText(szKernel32Dll, "kernel32.dll");
+	sText(szUser32Dll, "user32.dll");
+	sText(szNtdllDll, "ntdll.dll");
+	sText(szMsvrtDll, "msvcrt.dll");
+
+	_PIC(szMsvrtDll, printf);
+
+
+	 HOOK(szKernel32Dll, ReadProcessMemory,
+		[](HANDLE a, LPCVOID b, LPVOID c, SIZE_T d, SIZE_T* e) -> BOOL
+	{
+		INITPIC(false);
+		sText(szKernel32Dll, "kernel32.dll");
+		sText(szMsvrtDll, "msvcrt.dll");
+		_PIC(szMsvrtDll, printf);
+		//PIC(szKernel32Dll, ReadProcessMemory);
+		_printf(_("Hooked RPM %08x, %p, %p, %d, %p\n"),  a, b, c, d, e);
+		//return fReadProcessMemory(a,b,c,d,e);
+		return 0;
+	}
+	);
+
+
+    HOOK(szKernel32Dll, WriteProcessMemory,
+		[](HANDLE a, LPVOID b, LPCVOID c, SIZE_T d, SIZE_T* e) -> BOOL
+	{
+		INITPIC(false);
+		sText(szKernel32Dll, "kernel32.dll");
+		sText(szMsvrtDll, "msvcrt.dll");
+		_PIC(szMsvrtDll, printf);
+		PIC(szKernel32Dll, WriteProcessMemory);
+		_printf(_("Hooked WPM  %08x, %p, %p, %d, %p\n"), a, b, c, d, e);
+		return fWriteProcessMemory(a,b,c,d,e);
+	}
+	);
 
 }
 

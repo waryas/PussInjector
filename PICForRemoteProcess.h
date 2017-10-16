@@ -13,10 +13,21 @@
 #define LOADLIBRARYA_HASH 0x0726774c
 #define GETPROCESADDR_HASH 0x7802f749
 
-//I'm lazy as fuck
+//macro to make it easy for myself
+
+#define INITPIC(a) 	auto pLoadLibraryA = reinterpret_cast<decltype(&LoadLibraryA)>(GetProcAddressWithHash(LOADLIBRARYA_HASH));\
+					if (!pLoadLibraryA)\
+						return a;\
+					auto pGetProcAddress = reinterpret_cast<decltype(&GetProcAddress)>(GetProcAddressWithHash(GETPROCESADDR_HASH));\
+					if (!pGetProcAddress)\
+						return a;
+
 #define PPCAT_NX(A, B) A ## B
+
 #define PPCAT(A, B) PPCAT_NX(A, B)
+
 #define ROTR32(value, shift) (((DWORD) value >> (BYTE) shift) | ((DWORD) value << (32 - (BYTE) shift)))
+
 #define sText(var, s) volatile const char* PPCAT(tmp,var)= XorString(s); \
                       char* var = (char*)PPCAT(tmp,var);
 
@@ -24,8 +35,12 @@
 
 #define PIC(dll, func)  sText(PPCAT(sz,func), #func)\
 						auto PPCAT(f,func) = reinterpret_cast<decltype(&func)>(pGetProcAddress(pLoadLibraryA((char*)dll), (char*)PPCAT(sz,func)));
+
 #define _PIC(dll, func) sText(PPCAT(sz_,func), #func)\
 						auto PPCAT(_,func) = reinterpret_cast<decltype(&func)>(pGetProcAddress(pLoadLibraryA((char*)dll), (char*)PPCAT(sz_,func)));
+
+#define HOOK(dll, function, lambda) installHook<decltype(function)>(dll, _(#function), lambda);
+
 #if defined(_WIN64)
 	#define READPEBADDR (PPEB)__readgsqword(0x60);
 #elif defined(_M_ARM)
@@ -41,9 +56,11 @@
 #pragma auto_inline(off)
 #pragma check_stack(off)
 #pragma code_seg(push, ".p")
-	__declspec(dllexport) HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunctionHash);
+__declspec(dllexport) HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunctionHash);
+	template <typename T>
+	FORCEINLINE __declspec(dllexport) uintptr_t installHook(char*, char*, T b);
 	__declspec(dllexport) void __stdcall RemoteFunction(void);
-	__declspec(dllexport, noinline) void __stdcall end_marker(void);
+	__declspec(dllexport,noinline) void __stdcall end_marker(void);
 #pragma strict_gs_check(pop)   
 #pragma code_seg(pop)
 
