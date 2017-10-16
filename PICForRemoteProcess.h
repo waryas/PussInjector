@@ -56,11 +56,11 @@
 #pragma auto_inline(off)
 #pragma check_stack(off)
 #pragma code_seg(push, ".p")
-__declspec(dllexport) HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunctionHash);
+    HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunctionHash);
 	template <typename T>
-	FORCEINLINE __declspec(dllexport) uintptr_t installHook(char*, char*, T b);
-	__declspec(dllexport) void __stdcall RemoteFunction(void);
-	__declspec(dllexport,noinline) void __stdcall end_marker(void);
+	FORCEINLINE uintptr_t installHook(char*, char*, T b);
+	void __stdcall RemoteFunction(void);
+	__declspec(noinline) void __stdcall end_marker(void);
 #pragma strict_gs_check(pop)   
 #pragma code_seg(pop)
 

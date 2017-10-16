@@ -13,7 +13,7 @@
 #pragma check_stack(off)
 #pragma code_seg(push, ".p")
 
-__declspec(dllexport) HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunctionHash)
+HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunctionHash)
 {
 	PPEB PebAddress;
 	PMY_PEB_LDR_DATA pLdr;
@@ -88,20 +88,13 @@ __declspec(dllexport) HMODULE GetProcAddressWithHash(_In_ DWORD dwModuleFunction
 
 
 template <typename T>
-FORCEINLINE __declspec(dllexport) uintptr_t installHook(char* dllName, char*fctName, T b)
+FORCEINLINE uintptr_t installHook(char* dllName, char*fctName, T b)
 {
 	INITPIC(-1);
-
 	sText(szKernel32Dll, "kernel32.dll");
-	sText(szUser32Dll, "user32.dll");
-	sText(szNtdllDll, "ntdll.dll");
 	sText(szMsvrtDll, "msvcrt.dll");
-
-
 	PIC(szKernel32Dll, VirtualProtect);
 	PIC(szKernel32Dll, GetModuleHandleA);
-
-	_PIC(szMsvrtDll, printf);
 	_PIC(szMsvrtDll, strcmp);
 	
 	
@@ -112,12 +105,12 @@ FORCEINLINE __declspec(dllexport) uintptr_t installHook(char* dllName, char*fctN
 	PIMAGE_IMPORT_DESCRIPTOR img_import_desc = (PIMAGE_IMPORT_DESCRIPTOR)((byte*)img_dos_headers + img_nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
 
 	for (IMAGE_IMPORT_DESCRIPTOR *iid = img_import_desc; iid->Name != 0; iid++) {
-		for (int func_idx = 0; *(func_idx + (void**)(iid->FirstThunk + (size_t)module)) != nullptr; func_idx++) {
-			char* mod_func_name = (char*)(*(func_idx + (size_t*)(iid->OriginalFirstThunk + (size_t)module)) + (size_t)module + 2);
-			const intptr_t nmod_func_name = (intptr_t)mod_func_name;
+		for (int func_idx = 0; *(func_idx + (void**)(iid->FirstThunk + (uintptr_t)module)) != nullptr; func_idx++) {
+			char* mod_func_name = (char*)(*(func_idx + (uintptr_t*)(iid->OriginalFirstThunk + (uintptr_t)module)) + (uintptr_t)module + 2);
+			intptr_t nmod_func_name = (intptr_t)mod_func_name;
 			if (nmod_func_name >= 0) {
 				if (!_strcmp(fctName, mod_func_name))
-					IATAddr = func_idx + (void**)(iid->FirstThunk + (size_t)module);
+					IATAddr = func_idx + (void**)(iid->FirstThunk + (uintptr_t)module);
 			}
 		}
 	}
@@ -137,50 +130,42 @@ FORCEINLINE __declspec(dllexport) uintptr_t installHook(char* dllName, char*fctN
 
 
 
-__declspec(dllexport) void __stdcall RemoteFunction() {
+ void __stdcall RemoteFunction() {
 
 	INITPIC();
-
 	sText(szKernel32Dll, "kernel32.dll");
-	sText(szUser32Dll, "user32.dll");
-	sText(szNtdllDll, "ntdll.dll");
-	sText(szMsvrtDll, "msvcrt.dll");
 
-	_PIC(szMsvrtDll, printf);
-
-
-	 HOOK(szKernel32Dll, ReadProcessMemory,
-		[](HANDLE a, LPCVOID b, LPVOID c, SIZE_T d, SIZE_T* e) -> BOOL
-	{
-		INITPIC(false);
-		sText(szKernel32Dll, "kernel32.dll");
-		sText(szMsvrtDll, "msvcrt.dll");
-		_PIC(szMsvrtDll, printf);
-		//PIC(szKernel32Dll, ReadProcessMemory);
-		_printf(_("Hooked RPM %08x, %p, %p, %d, %p\n"),  a, b, c, d, e);
-		//return fReadProcessMemory(a,b,c,d,e);
-		return 0;
-	}
+	HOOK(szKernel32Dll, 
+		ReadProcessMemory,[](HANDLE a, LPCVOID b, LPVOID c, SIZE_T d, SIZE_T* e) -> BOOL
+		{
+			INITPIC(false);
+			sText(szKernel32Dll, "kernel32.dll");
+			sText(szMsvrtDll, "msvcrt.dll");
+			_PIC(szMsvrtDll, printf);
+			PIC(szKernel32Dll, ReadProcessMemory);
+			_printf(_("Hooked RPM %08x, %p, %p, %d, %p\n"),  a, b, c, d, e);
+			return fReadProcessMemory(a,b,c,d,e);
+		}
 	);
 
 
-    HOOK(szKernel32Dll, WriteProcessMemory,
-		[](HANDLE a, LPVOID b, LPCVOID c, SIZE_T d, SIZE_T* e) -> BOOL
-	{
-		INITPIC(false);
-		sText(szKernel32Dll, "kernel32.dll");
-		sText(szMsvrtDll, "msvcrt.dll");
-		_PIC(szMsvrtDll, printf);
-		PIC(szKernel32Dll, WriteProcessMemory);
-		_printf(_("Hooked WPM  %08x, %p, %p, %d, %p\n"), a, b, c, d, e);
-		return fWriteProcessMemory(a,b,c,d,e);
-	}
+    HOOK(szKernel32Dll,
+		WriteProcessMemory, [](HANDLE a, LPVOID b, LPCVOID c, SIZE_T d, SIZE_T* e) -> BOOL
+		{
+			INITPIC(false);
+			sText(szKernel32Dll, "kernel32.dll");
+			sText(szMsvrtDll, "msvcrt.dll");
+			_PIC(szMsvrtDll, printf);
+			PIC(szKernel32Dll, WriteProcessMemory);
+			_printf(_("Hooked WPM  %08x, %p, %p, %d, %p\n"), a, b, c, d, e);
+			return fWriteProcessMemory(a,b,c,d,e);
+		}
 	);
 
 }
 
 #pragma optimize("", off)
-__declspec(dllexport, noinline) void __stdcall end_marker(void) {
+__declspec(noinline) void __stdcall end_marker(void) {
 	end_marker();
 	return;
 }
